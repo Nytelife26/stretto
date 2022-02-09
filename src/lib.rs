@@ -205,7 +205,7 @@ extern crate log;
 extern crate serde;
 
 cfg_async!(
-    pub(crate) mod axync {
+    pub(crate) mod r#async {
         pub(crate) use tokio::select;
         pub(crate) use tokio::sync::mpsc::{
             channel as bounded, Receiver, Sender, UnboundedReceiver, UnboundedSender,
