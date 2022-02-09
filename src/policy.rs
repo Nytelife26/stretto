@@ -23,12 +23,15 @@ const DEFAULT_SAMPLES: usize = 5;
 
 macro_rules! impl_policy {
 	($policy: ident) => {
-		use crate::policy::DEFAULT_SAMPLES;
 		use crate::policy::PolicyPair;
+		use crate::policy::DEFAULT_SAMPLES;
 
 		impl $policy {
 			#[inline]
-			pub(crate) fn new(ctrs: usize, max_cost: i64) -> Result<Self, CacheError> {
+			pub(crate) fn new(
+				ctrs: usize,
+				max_cost: i64,
+			) -> Result<Self, CacheError> {
 				Self::with_hasher(ctrs, max_cost, RandomState::new())
 			}
 		}
@@ -40,7 +43,11 @@ macro_rules! impl_policy {
 				self.inner.lock().set_metrics(metrics);
 			}
 
-			pub fn add(&self, key: u64, cost: i64) -> (Option<Vec<PolicyPair>>, bool) {
+			pub fn add(
+				&self,
+				key: u64,
+				cost: i64,
+			) -> (Option<Vec<PolicyPair>>, bool) {
 				let mut inner = self.inner.lock();
 				let max_cost = inner.costs.get_max_cost();
 
@@ -105,8 +112,11 @@ macro_rules! impl_policy {
 
 					// Delete the victim from metadata.
 					inner.costs.remove(&min_key).map(|cost| {
-						self.metrics
-							.add(MetricType::CostEvict, min_key, cost as u64);
+						self.metrics.add(
+							MetricType::CostEvict,
+							min_key,
+							cost as u64,
+						);
 						self.metrics.add(MetricType::KeyEvict, min_key, 1);
 					});
 
@@ -213,10 +223,7 @@ impl PolicyPair {
 
 impl From<(u64, i64)> for PolicyPair {
 	fn from(pair: (u64, i64)) -> Self {
-		Self {
-			key: pair.0,
-			cost: pair.1,
-		}
+		Self { key: pair.0, cost: pair.1 }
 	}
 }
 
@@ -227,7 +234,11 @@ impl<S: BuildHasher + Clone + 'static> PolicyInner<S> {
 	}
 
 	#[inline]
-	fn with_hasher(ctrs: usize, max_cost: i64, hasher: S) -> Result<Arc<Mutex<Self>>, CacheError> {
+	fn with_hasher(
+		ctrs: usize,
+		max_cost: i64,
+		hasher: S,
+	) -> Result<Arc<Mutex<Self>>, CacheError> {
 		let this = Self {
 			admit: TinyLFU::new(ctrs)?,
 			costs: SampledLFU::with_hasher(max_cost, hasher),
@@ -288,7 +299,11 @@ impl<S: BuildHasher + Clone + 'static> SampledLFU<S> {
 
 	/// Create a new SampledLFU with samples and hasher
 	#[inline]
-	pub fn with_samples_and_hasher(max_cost: i64, samples: usize, hasher: S) -> Self {
+	pub fn with_samples_and_hasher(
+		max_cost: i64,
+		samples: usize,
+		hasher: S,
+	) -> Self {
 		Self {
 			samples,
 			max_cost: AtomicI64::new(max_cost),
@@ -317,7 +332,10 @@ impl<S: BuildHasher + Clone + 'static> SampledLFU<S> {
 	}
 
 	/// try to fill the SampledLFU by the given pairs.
-	pub fn fill_sample(&mut self, mut pairs: Vec<PolicyPair>) -> Vec<PolicyPair> {
+	pub fn fill_sample(
+		&mut self,
+		mut pairs: Vec<PolicyPair>,
+	) -> Vec<PolicyPair> {
 		if pairs.len() >= self.samples {
 			pairs
 		} else {

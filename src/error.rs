@@ -2,34 +2,34 @@ use std::fmt::{Debug, Display, Formatter};
 
 /// CacheError contains the error of this crate
 pub enum CacheError {
-    /// Count Min sketch with wrong width.
-    InvalidCountMinWidth(u64),
+	/// Count Min sketch with wrong width.
+	InvalidCountMinWidth(u64),
 
-    /// Invalid Samples value for TinyLFU.
-    InvalidSamples(usize),
+	/// Invalid Samples value for TinyLFU.
+	InvalidSamples(usize),
 
-    /// Invalid false positive ratio for TinyLFU.
-    InvalidFalsePositiveRatio(f64),
+	/// Invalid false positive ratio for TinyLFU.
+	InvalidFalsePositiveRatio(f64),
 
-    /// Invalid number of counters for the Cache.
-    InvalidNumCounters,
+	/// Invalid number of counters for the Cache.
+	InvalidNumCounters,
 
-    /// Invalid max cost for the Cache.
-    InvalidMaxCost,
+	/// Invalid max cost for the Cache.
+	InvalidMaxCost,
 
-    /// Invalid insert buffer size for the Cache.
-    InvalidBufferSize,
+	/// Invalid insert buffer size for the Cache.
+	InvalidBufferSize,
 
-    /// Error when send msg between threads.
-    SendError(String),
+	/// Error when send msg between threads.
+	SendError(String),
 
-    /// Error when receive msg between threads.
-    RecvError(String),
+	/// Error when receive msg between threads.
+	RecvError(String),
 }
 
 impl CacheError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        match self {
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		match self {
             CacheError::InvalidSamples(v) => write!(f, "invalid number of samples: {}", *v),
             CacheError::InvalidCountMinWidth(v) => {
                 write!(f, "invalid count main sketch width: {}", *v)
@@ -45,19 +45,19 @@ impl CacheError {
             CacheError::InvalidMaxCost => write!(f, "max_cost can't be zero"),
             CacheError::InvalidBufferSize => write!(f, "buffer_size can't be zero"),
         }
-    }
+	}
 }
 
 impl Display for CacheError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        self.fmt(f)
-    }
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		self.fmt(f)
+	}
 }
 
 impl Debug for CacheError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        self.fmt(f)
-    }
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		self.fmt(f)
+	}
 }
 
 impl std::error::Error for CacheError {}

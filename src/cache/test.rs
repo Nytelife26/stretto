@@ -74,10 +74,7 @@ impl CacheCallback<String> for TestCallbackDropUpdates {
 		let last_evicted_insert = item.val.unwrap();
 
 		assert!(
-			!self
-				.set
-				.lock()
-				.contains(&last_evicted_insert.parse().unwrap()),
+			!self.set.lock().contains(&last_evicted_insert.parse().unwrap()),
 			"val = {} was dropped but it got evicted. Dropped items: {:?}",
 			last_evicted_insert,
 			self.set.lock().iter().copied().collect::<Vec<u64>>()
@@ -89,11 +86,13 @@ impl CacheCallback<String> for TestCallbackDropUpdates {
 mod sync_test {
 	use super::*;
 	use crate::cache::sync::Item;
-	use crate::cache::test::{KHTest, TestCallback, TestCallbackDropUpdates, TestCoster};
+	use crate::cache::test::{
+		KHTest, TestCallback, TestCallbackDropUpdates, TestCoster,
+	};
 	use crate::{
-		Cache, CacheBuilder, CacheCallback, Coster, DefaultCacheCallback, DefaultCoster,
-		DefaultKeyBuilder, DefaultUpdateValidator, KeyBuilder, TransparentKeyBuilder,
-		UpdateValidator,
+		Cache, CacheBuilder, CacheCallback, Coster, DefaultCacheCallback,
+		DefaultCoster, DefaultKeyBuilder, DefaultUpdateValidator, KeyBuilder,
+		TransparentKeyBuilder, UpdateValidator,
 	};
 	use crossbeam_channel::{bounded, select};
 	use parking_lot::Mutex;
@@ -105,13 +104,21 @@ mod sync_test {
 	use std::thread::{sleep, spawn};
 	use std::time::Duration;
 
-	fn new_test_cache<K: Hash + Eq, V: Send + Sync + 'static, KH: KeyBuilder<K>>(
+	fn new_test_cache<
+		K: Hash + Eq,
+		V: Send + Sync + 'static,
+		KH: KeyBuilder<K>,
+	>(
 		kh: KH,
 	) -> Cache<K, V, KH> {
 		Cache::new_with_key_builder(100, 10, kh).unwrap()
 	}
 
-	fn retry_set<C: Coster<u64>, U: UpdateValidator<u64>, CB: CacheCallback<u64>>(
+	fn retry_set<
+		C: Coster<u64>,
+		U: UpdateValidator<u64>,
+		CB: CacheCallback<u64>,
+	>(
 		c: Cache<u64, u64, TransparentKeyBuilder<u64>, C, U, CB>,
 		key: u64,
 		val: u64,
@@ -133,18 +140,22 @@ mod sync_test {
 	#[test]
 	fn test_cache_builder() {
 		let _: Cache<u64, u64, DefaultKeyBuilder> =
-			CacheBuilder::new_with_key_builder(100, 10, TransparentKeyBuilder::default())
-				.set_coster(DefaultCoster::default())
-				.set_update_validator(DefaultUpdateValidator::default())
-				.set_callback(DefaultCacheCallback::default())
-				.set_num_counters(200)
-				.set_max_cost(100)
-				.set_cleanup_duration(Duration::from_secs(1))
-				.set_buffer_size(1000)
-				.set_key_builder(DefaultKeyBuilder::default())
-				.set_hasher(RandomState::default())
-				.finalize()
-				.unwrap();
+			CacheBuilder::new_with_key_builder(
+				100,
+				10,
+				TransparentKeyBuilder::default(),
+			)
+			.set_coster(DefaultCoster::default())
+			.set_update_validator(DefaultUpdateValidator::default())
+			.set_callback(DefaultCacheCallback::default())
+			.set_num_counters(200)
+			.set_max_cost(100)
+			.set_cleanup_duration(Duration::from_secs(1))
+			.set_buffer_size(1000)
+			.set_key_builder(DefaultKeyBuilder::default())
+			.set_hasher(RandomState::default())
+			.finalize()
+			.unwrap();
 	}
 
 	#[test]
@@ -152,7 +163,8 @@ mod sync_test {
 		let ctr = Arc::new(AtomicU64::new(0));
 
 		let c: Cache<u64, u64, KHTest> =
-			Cache::new_with_key_builder(10, 1000, KHTest { ctr: ctr.clone() }).unwrap();
+			Cache::new_with_key_builder(10, 1000, KHTest { ctr: ctr.clone() })
+				.unwrap();
 
 		assert!(c.insert(1, 1, 1));
 		sleep(Duration::from_millis(10));
@@ -252,7 +264,12 @@ mod sync_test {
 	#[test]
 	fn test_cache_multiple_close() {
 		let c: Cache<i64, i64, TransparentKeyBuilder<i64>> =
-			Cache::new_with_key_builder(100, 10, TransparentKeyBuilder::default()).unwrap();
+			Cache::new_with_key_builder(
+				100,
+				10,
+				TransparentKeyBuilder::default(),
+			)
+			.unwrap();
 
 		let _ = c.close();
 		let _ = c.close();
@@ -543,11 +560,12 @@ mod sync_test {
 
 	#[test]
 	fn test_cache_blockon_clear() {
-		let c: Cache<u64, u64, TransparentKeyBuilder<u64>> = Cache::builder(100, 10)
-			.set_key_builder(TransparentKeyBuilder::default())
-			.set_ignore_internal_cost(true)
-			.finalize()
-			.unwrap();
+		let c: Cache<u64, u64, TransparentKeyBuilder<u64>> =
+			Cache::builder(100, 10)
+				.set_key_builder(TransparentKeyBuilder::default())
+				.set_ignore_internal_cost(true)
+				.finalize()
+				.unwrap();
 
 		let (stop_tx, stop_rx) = bounded(1);
 
@@ -698,8 +716,9 @@ mod async_test {
 	use super::*;
 	use crate::cache::r#async::Item;
 	use crate::{
-		AsyncCache, AsyncCacheBuilder, CacheCallback, Coster, DefaultCacheCallback, DefaultCoster,
-		DefaultKeyBuilder, DefaultUpdateValidator, KeyBuilder, TransparentKeyBuilder,
+		AsyncCache, AsyncCacheBuilder, CacheCallback, Coster,
+		DefaultCacheCallback, DefaultCoster, DefaultKeyBuilder,
+		DefaultUpdateValidator, KeyBuilder, TransparentKeyBuilder,
 		UpdateValidator,
 	};
 	use parking_lot::Mutex;
@@ -715,13 +734,21 @@ mod async_test {
 	use tokio::task::spawn;
 	use tokio::time::sleep;
 
-	async fn new_test_cache<K: Hash + Eq, V: Send + Sync + 'static, KH: KeyBuilder<K>>(
+	async fn new_test_cache<
+		K: Hash + Eq,
+		V: Send + Sync + 'static,
+		KH: KeyBuilder<K>,
+	>(
 		kh: KH,
 	) -> AsyncCache<K, V, KH> {
 		AsyncCache::new_with_key_builder(100, 10, kh).unwrap()
 	}
 
-	async fn retry_set<C: Coster<u64>, U: UpdateValidator<u64>, CB: CacheCallback<u64>>(
+	async fn retry_set<
+		C: Coster<u64>,
+		U: UpdateValidator<u64>,
+		CB: CacheCallback<u64>,
+	>(
 		c: AsyncCache<u64, u64, TransparentKeyBuilder<u64>, C, U, CB>,
 		key: u64,
 		val: u64,
@@ -743,18 +770,22 @@ mod async_test {
 	#[tokio::test]
 	async fn test_cache_builder() {
 		let _: AsyncCache<u64, u64, DefaultKeyBuilder> =
-			AsyncCacheBuilder::new_with_key_builder(100, 10, TransparentKeyBuilder::default())
-				.set_coster(DefaultCoster::default())
-				.set_update_validator(DefaultUpdateValidator::default())
-				.set_callback(DefaultCacheCallback::default())
-				.set_num_counters(200)
-				.set_max_cost(100)
-				.set_cleanup_duration(Duration::from_secs(1))
-				.set_buffer_size(1000)
-				.set_key_builder(DefaultKeyBuilder::default())
-				.set_hasher(RandomState::default())
-				.finalize()
-				.unwrap();
+			AsyncCacheBuilder::new_with_key_builder(
+				100,
+				10,
+				TransparentKeyBuilder::default(),
+			)
+			.set_coster(DefaultCoster::default())
+			.set_update_validator(DefaultUpdateValidator::default())
+			.set_callback(DefaultCacheCallback::default())
+			.set_num_counters(200)
+			.set_max_cost(100)
+			.set_cleanup_duration(Duration::from_secs(1))
+			.set_buffer_size(1000)
+			.set_key_builder(DefaultKeyBuilder::default())
+			.set_hasher(RandomState::default())
+			.finalize()
+			.unwrap();
 	}
 
 	#[tokio::test]
@@ -762,7 +793,12 @@ mod async_test {
 		let ctr = Arc::new(AtomicU64::new(0));
 
 		let c: AsyncCache<u64, u64, KHTest> =
-			AsyncCache::new_with_key_builder(10, 1000, KHTest { ctr: ctr.clone() }).unwrap();
+			AsyncCache::new_with_key_builder(
+				10,
+				1000,
+				KHTest { ctr: ctr.clone() },
+			)
+			.unwrap();
 
 		assert!(c.insert(1, 1, 1).await);
 		sleep(Duration::from_millis(10)).await;
@@ -808,7 +844,12 @@ mod async_test {
 	#[tokio::test]
 	async fn test_cache_multiple_close() {
 		let c: AsyncCache<i64, i64, TransparentKeyBuilder<i64>> =
-			AsyncCache::new_with_key_builder(100, 10, TransparentKeyBuilder::default()).unwrap();
+			AsyncCache::new_with_key_builder(
+				100,
+				10,
+				TransparentKeyBuilder::default(),
+			)
+			.unwrap();
 
 		let _ = c.close().await;
 		let _ = c.close().await;
@@ -1204,7 +1245,9 @@ mod async_test {
 				.unwrap();
 
 			// Set initial value for key = 1
-			assert!(c.insert_with_ttl(1, 1, 0, Duration::from_millis(800)).await);
+			assert!(
+				c.insert_with_ttl(1, 1, 0, Duration::from_millis(800)).await
+			);
 
 			sleep(Duration::from_millis(100)).await;
 
@@ -1276,7 +1319,10 @@ mod async_test {
 									val = vec!["a"; 1000].join("");
 								}
 								let cost = val.len() + 2;
-								assert!(c.insert(get_key(), val, cost as i64).await);
+								assert!(
+									c.insert(get_key(), val, cost as i64)
+										.await
+								);
 							}
 							Some(_) => {}
 						}
@@ -1288,11 +1334,12 @@ mod async_test {
 
 	#[tokio::test]
 	async fn test_cache_blockon_clear() {
-		let c: AsyncCache<u64, u64, TransparentKeyBuilder<u64>> = AsyncCache::builder(100, 10)
-			.set_key_builder(TransparentKeyBuilder::default())
-			.set_ignore_internal_cost(true)
-			.finalize()
-			.unwrap();
+		let c: AsyncCache<u64, u64, TransparentKeyBuilder<u64>> =
+			AsyncCache::builder(100, 10)
+				.set_key_builder(TransparentKeyBuilder::default())
+				.set_ignore_internal_cost(true)
+				.finalize()
+				.unwrap();
 
 		let (stop_tx, mut stop_rx) = channel(1);
 

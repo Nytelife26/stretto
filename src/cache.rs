@@ -22,9 +22,7 @@ macro_rules! impl_builder {
 			/// not necessarily the `max_cost` value.
 			#[inline]
 			pub fn set_num_counters(self, num_counters: usize) -> Self {
-				Self {
-					inner: self.inner.set_num_counters(num_counters),
-				}
+				Self { inner: self.inner.set_num_counters(num_counters) }
 			}
 
 			/// Set the max_cost for the Cache.
@@ -39,9 +37,7 @@ macro_rules! impl_builder {
 			/// `max_cost` could be anything as long as it matches how you're using the cost values when calling `insert`.
 			#[inline]
 			pub fn set_max_cost(self, max_cost: i64) -> Self {
-				Self {
-					inner: self.inner.set_max_cost(max_cost),
-				}
+				Self { inner: self.inner.set_max_cost(max_cost) }
 			}
 
 			/// Set the insert buffer size for the Cache.
@@ -53,9 +49,7 @@ macro_rules! impl_builder {
 			/// This is a fine-tuning mechanism and you probably won't have to touch this.
 			#[inline]
 			pub fn set_buffer_size(self, sz: usize) -> Self {
-				Self {
-					inner: self.inner.set_buffer_size(sz),
-				}
+				Self { inner: self.inner.set_buffer_size(sz) }
 			}
 
 			/// Set whether record the metrics or not.
@@ -64,9 +58,7 @@ macro_rules! impl_builder {
 			/// The reason this is a Builder flag is because there's a 10% throughput performance overhead.
 			#[inline]
 			pub fn set_metrics(self, val: bool) -> Self {
-				Self {
-					inner: self.inner.set_metrics(val),
-				}
+				Self { inner: self.inner.set_metrics(val) }
 			}
 
 			/// Set whether ignore the internal cost or not.
@@ -76,17 +68,13 @@ macro_rules! impl_builder {
 			/// Set it to true to ignore the internal cost.
 			#[inline]
 			pub fn set_ignore_internal_cost(self, val: bool) -> Self {
-				Self {
-					inner: self.inner.set_ignore_internal_cost(val),
-				}
+				Self { inner: self.inner.set_ignore_internal_cost(val) }
 			}
 
 			/// Set the cleanup ticker for Cache, each tick the Cache will clean the expired entries.
 			#[inline]
 			pub fn set_cleanup_duration(self, d: Duration) -> Self {
-				Self {
-					inner: self.inner.set_cleanup_duration(d),
-				}
+				Self { inner: self.inner.set_cleanup_duration(d) }
 			}
 
 			/// Set the [`KeyBuilder`] for the Cache
@@ -110,9 +98,7 @@ macro_rules! impl_builder {
 				self,
 				kh: NKH,
 			) -> $ty<K, V, NKH, C, U, CB, S> {
-				$ty {
-					inner: self.inner.set_key_builder(kh),
-				}
+				$ty { inner: self.inner.set_key_builder(kh) }
 			}
 
 			/// Set the coster for the Cache.
@@ -129,10 +115,11 @@ macro_rules! impl_builder {
 			///
 			/// [`Coster`]: trait.Coster.html
 			#[inline]
-			pub fn set_coster<NC: Coster<V>>(self, coster: NC) -> $ty<K, V, KH, NC, U, CB, S> {
-				$ty {
-					inner: self.inner.set_coster(coster),
-				}
+			pub fn set_coster<NC: Coster<V>>(
+				self,
+				coster: NC,
+			) -> $ty<K, V, KH, NC, U, CB, S> {
+				$ty { inner: self.inner.set_coster(coster) }
 			}
 
 			/// Set the update validator for the Cache.
@@ -147,9 +134,7 @@ macro_rules! impl_builder {
 				self,
 				uv: NU,
 			) -> $ty<K, V, KH, C, NU, CB, S> {
-				$ty {
-					inner: self.inner.set_update_validator(uv),
-				}
+				$ty { inner: self.inner.set_update_validator(uv) }
 			}
 
 			/// Set the callbacks for the Cache.
@@ -162,9 +147,7 @@ macro_rules! impl_builder {
 				self,
 				cb: NCB,
 			) -> $ty<K, V, KH, C, U, NCB, S> {
-				$ty {
-					inner: self.inner.set_callback(cb),
-				}
+				$ty { inner: self.inner.set_callback(cb) }
 			}
 
 			/// Set the hasher for the Cache.
@@ -174,9 +157,7 @@ macro_rules! impl_builder {
 				self,
 				hasher: NS,
 			) -> $ty<K, V, KH, C, U, CB, NS> {
-				$ty {
-					inner: self.inner.set_hasher(hasher),
-				}
+				$ty { inner: self.inner.set_hasher(hasher) }
 			}
 		}
 	};
@@ -190,7 +171,10 @@ macro_rules! impl_cache {
 		impl<K: Hash + Eq, V: Send + Sync + 'static> $cache<K, V> {
 			/// Returns a Cache instance with default configruations.
 			#[inline]
-			pub fn new(num_counters: usize, max_cost: i64) -> Result<Self, CacheError> {
+			pub fn new(
+				num_counters: usize,
+				max_cost: i64,
+			) -> Result<Self, CacheError> {
 				$builder::new(num_counters, max_cost).finalize()
 			}
 
@@ -212,7 +196,9 @@ macro_rules! impl_cache {
 			}
 		}
 
-		impl<K: Hash + Eq, V: Send + Sync + 'static, KH: KeyBuilder<K>> $cache<K, V, KH> {
+		impl<K: Hash + Eq, V: Send + Sync + 'static, KH: KeyBuilder<K>>
+			$cache<K, V, KH>
+		{
 			/// Returns a Cache instance with default configruations.
 			#[inline]
 			pub fn new_with_key_builder(
@@ -220,7 +206,8 @@ macro_rules! impl_cache {
 				max_cost: i64,
 				index: KH,
 			) -> Result<Self, CacheError> {
-				$builder::new_with_key_builder(num_counters, max_cost, index).finalize()
+				$builder::new_with_key_builder(num_counters, max_cost, index)
+					.finalize()
 			}
 		}
 
@@ -279,9 +266,9 @@ macro_rules! impl_cache {
 			/// item was found and is not expired.
 			pub fn get_ttl(&self, key: &K) -> Option<Duration> {
 				let (index, conflict) = self.key_to_hash.build_key(key);
-				self.store
-					.get(&index, conflict)
-					.and_then(|_| self.store.expiration(&index).map(|time| time.get_ttl()))
+				self.store.get(&index, conflict).and_then(|_| {
+					self.store.expiration(&index).map(|time| time.get_ttl())
+				})
 			}
 
 			/// clear the Cache.
@@ -349,7 +336,8 @@ macro_rules! impl_cache {
 
 				// cost is eventually updated. The expiration must also be immediately updated
 				// to prevent items from being prematurely removed from the map.
-				let external_cost = if cost == 0 { self.coster.cost(&val) } else { 0 };
+				let external_cost =
+					if cost == 0 { self.coster.cost(&val) } else { 0 };
 				match self.store.update(index, val, conflict, expiration) {
 					UpdateResult::NotExist(v)
 					| UpdateResult::Reject(v)
@@ -359,13 +347,22 @@ macro_rules! impl_cache {
 						} else {
 							Some((
 								index,
-								$item::new(index, conflict, cost + external_cost, v, expiration),
+								$item::new(
+									index,
+									conflict,
+									cost + external_cost,
+									v,
+									expiration,
+								),
 							))
 						}
 					}
 					UpdateResult::Update(v) => {
 						self.callback.on_exit(Some(v));
-						Some((index, $item::update(index, cost, external_cost)))
+						Some((
+							index,
+							$item::update(index, cost, external_cost),
+						))
 					}
 				}
 			}
@@ -430,17 +427,12 @@ macro_rules! impl_cache_processor {
 			#[inline]
 			fn handle_item(&mut self, item: $item<V>) {
 				match item {
-					$item::New {
-						key,
-						conflict,
-						cost,
-						value,
-						expiration,
-					} => {
+					$item::New { key, conflict, cost, value, expiration } => {
 						let cost = self.calculate_internal_cost(cost);
 						let (victims, added) = self.policy.add(key, cost);
 						if added {
-							self.store.insert(key, value, conflict, expiration);
+							self.store
+								.insert(key, value, conflict, expiration);
 							self.track_admission(key);
 						} else {
 							self.callback.on_reject(CrateItem {
@@ -468,18 +460,17 @@ macro_rules! impl_cache_processor {
 							})
 						});
 					}
-					$item::Update {
-						key,
-						cost,
-						external_cost,
-					} => {
-						let cost = self.calculate_internal_cost(cost) + external_cost;
+					$item::Update { key, cost, external_cost } => {
+						let cost =
+							self.calculate_internal_cost(cost) + external_cost;
 						self.policy.update(&key, cost)
 					}
 					$item::Delete { key, conflict } => {
 						self.policy.remove(&key); // deals with metrics updates.
-						if let Some(sitem) = self.store.remove(&key, conflict) {
-							self.callback.on_exit(Some(sitem.value.into_inner()));
+						if let Some(sitem) = self.store.remove(&key, conflict)
+						{
+							self.callback
+								.on_exit(Some(sitem.value.into_inner()));
 						}
 					}
 					$item::Wait(wg) => wg.done(),
@@ -546,19 +537,15 @@ macro_rules! impl_cache_cleaner {
 			#[inline]
 			fn handle_item(&mut self, item: $item<V>) {
 				match item {
-					$item::New {
-						key,
-						conflict,
-						cost,
-						value,
-						expiration,
-					} => self.processor.callback.on_evict(CrateItem::new(
-						key,
-						conflict,
-						cost,
-						Some(value),
-						expiration,
-					)),
+					$item::New { key, conflict, cost, value, expiration } => {
+						self.processor.callback.on_evict(CrateItem::new(
+							key,
+							conflict,
+							cost,
+							Some(value),
+							expiration,
+						))
+					}
 					$item::Delete { .. } | $item::Update { .. } => {}
 					$item::Wait(wg) => wg.done(),
 				}

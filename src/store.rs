@@ -3,7 +3,9 @@ use crate::policy::AsyncLFUPolicy;
 #[cfg(feature = "sync")]
 use crate::policy::LFUPolicy;
 use crate::ttl::{ExpirationMap, Time};
-use crate::utils::{change_lifetime_const, SharedValue, ValueRef, ValueRefMut};
+use crate::utils::{
+	change_lifetime_const, SharedValue, ValueRef, ValueRefMut,
+};
 use crate::{DefaultUpdateValidator, Item as CrateItem, UpdateValidator};
 use parking_lot::RwLock;
 use std::collections::hash_map::RandomState;
@@ -33,7 +35,8 @@ impl<V> Debug for StoreItem<V> {
 	}
 }
 
-type Shards<V, SS> = Box<[RwLock<HashMap<u64, StoreItem<V>, SS>>; NUM_OF_SHARDS]>;
+type Shards<V, SS> =
+	Box<[RwLock<HashMap<u64, StoreItem<V>, SS>>; NUM_OF_SHARDS]>;
 
 pub(crate) struct ShardedMap<
 	V: Send + Sync + 'static,
@@ -50,13 +53,19 @@ pub(crate) struct ShardedMap<
 impl<V: Send + Sync + 'static> ShardedMap<V> {
 	#[allow(dead_code)]
 	pub fn new() -> Self {
-		Self::with_validator(ExpirationMap::new(), DefaultUpdateValidator::default())
+		Self::with_validator(
+			ExpirationMap::new(),
+			DefaultUpdateValidator::default(),
+		)
 	}
 }
 
 impl<V: Send + Sync + 'static, U: UpdateValidator<V>> ShardedMap<V, U> {
 	#[allow(dead_code)]
-	pub fn with_validator(em: ExpirationMap<RandomState>, validator: U) -> Self {
+	pub fn with_validator(
+		em: ExpirationMap<RandomState>,
+		validator: U,
+	) -> Self {
 		let shards = Box::new(
 			(0..NUM_OF_SHARDS)
 				.map(|_| RwLock::new(HashMap::new()))
@@ -66,12 +75,7 @@ impl<V: Send + Sync + 'static, U: UpdateValidator<V>> ShardedMap<V, U> {
 		);
 
 		let size = mem::size_of::<StoreItem<V>>();
-		Self {
-			shards,
-			em,
-			store_item_size: size,
-			validator,
-		}
+		Self { shards, em, store_item_size: size, validator }
 	}
 }
 
@@ -82,7 +86,11 @@ impl<
 		ES: BuildHasher + Clone + 'static,
 	> ShardedMap<V, U, SS, ES>
 {
-	pub fn with_validator_and_hasher(em: ExpirationMap<ES>, validator: U, hasher: SS) -> Self {
+	pub fn with_validator_and_hasher(
+		em: ExpirationMap<ES>,
+		validator: U,
+		hasher: SS,
+	) -> Self {
 		let shards = Box::new(
 			(0..NUM_OF_SHARDS)
 				.map(|_| RwLock::new(HashMap::with_hasher(hasher.clone())))
@@ -92,15 +100,14 @@ impl<
 		);
 
 		let size = mem::size_of::<StoreItem<V>>();
-		Self {
-			shards,
-			em,
-			store_item_size: size,
-			validator,
-		}
+		Self { shards, em, store_item_size: size, validator }
 	}
 
-	pub fn get(&self, key: &u64, conflict: u64) -> Option<ValueRef<'_, V, SS>> {
+	pub fn get(
+		&self,
+		key: &u64,
+		conflict: u64,
+	) -> Option<ValueRef<'_, V, SS>> {
 		let data = self.shards[(*key as usize) % NUM_OF_SHARDS].read();
 
 		if let Some(item) = data.get(key) {
@@ -122,7 +129,11 @@ impl<
 		}
 	}
 
-	pub fn get_mut(&self, key: &u64, conflict: u64) -> Option<ValueRefMut<'_, V, SS>> {
+	pub fn get_mut(
+		&self,
+		key: &u64,
+		conflict: u64,
+	) -> Option<ValueRefMut<'_, V, SS>> {
 		let data = self.shards[(*key as usize) % NUM_OF_SHARDS].write();
 
 		if let Some(item) = data.get(key) {
@@ -179,7 +190,13 @@ impl<
 		);
 	}
 
-	pub fn update(&self, key: u64, mut val: V, conflict: u64, expiration: Time) -> UpdateResult<V> {
+	pub fn update(
+		&self,
+		key: u64,
+		mut val: V,
+		conflict: u64,
+		expiration: Time,
+	) -> UpdateResult<V> {
 		let mut data = self.shards[(key as usize) % NUM_OF_SHARDS].write();
 		match data.get_mut(&key) {
 			None => UpdateResult::NotExist(val),
@@ -289,12 +306,20 @@ impl<
 	}
 }
 
-unsafe impl<V: Send + Sync + 'static, U: UpdateValidator<V>, SS: BuildHasher, ES: BuildHasher> Send
-	for ShardedMap<V, U, SS, ES>
+unsafe impl<
+		V: Send + Sync + 'static,
+		U: UpdateValidator<V>,
+		SS: BuildHasher,
+		ES: BuildHasher,
+	> Send for ShardedMap<V, U, SS, ES>
 {
 }
-unsafe impl<V: Send + Sync + 'static, U: UpdateValidator<V>, SS: BuildHasher, ES: BuildHasher> Sync
-	for ShardedMap<V, U, SS, ES>
+unsafe impl<
+		V: Send + Sync + 'static,
+		U: UpdateValidator<V>,
+		SS: BuildHasher,
+		ES: BuildHasher,
+	> Sync for ShardedMap<V, U, SS, ES>
 {
 }
 

@@ -169,8 +169,6 @@ cfg_sync! {
 	}
 }
 
-
-
 cfg_async! {
 	mod async_test {
 		use super::*;
@@ -391,7 +389,8 @@ fn test_sampled_lfu_fill_sample() {
 	let mut l = SampledLFU::new(16);
 	l.increment(4, 4);
 	l.increment(5, 5);
-	let sample = l.fill_sample(vec![(1, 1).into(), (2, 2).into(), (3, 3).into()]);
+	let sample =
+		l.fill_sample(vec![(1, 1).into(), (2, 2).into(), (3, 3).into()]);
 	let k = sample[sample.len() - 1].key;
 	assert_eq!(5, sample.len());
 	assert_ne!(1, k);

@@ -205,44 +205,48 @@ extern crate log;
 extern crate serde;
 
 cfg_async!(
-    pub(crate) mod r#async {
-        pub(crate) use tokio::select;
-        pub(crate) use tokio::sync::mpsc::{
-            channel as bounded, Receiver, Sender, UnboundedReceiver, UnboundedSender,
-        };
-        pub(crate) use tokio::task::{spawn, JoinHandle};
-        pub(crate) use tokio::time::{sleep, Instant};
-        pub(crate) type WaitGroup = wg::AsyncWaitGroup;
-        use tokio::sync::mpsc::unbounded_channel;
+	pub(crate) mod r#async {
+		pub(crate) use tokio::select;
+		pub(crate) use tokio::sync::mpsc::{
+			channel as bounded, Receiver, Sender, UnboundedReceiver,
+			UnboundedSender,
+		};
+		pub(crate) use tokio::task::{spawn, JoinHandle};
+		pub(crate) use tokio::time::{sleep, Instant};
+		pub(crate) type WaitGroup = wg::AsyncWaitGroup;
+		use tokio::sync::mpsc::unbounded_channel;
 
-        pub(crate) fn stop_channel() -> (Sender<()>, Receiver<()>) {
-            bounded(1)
-        }
+		pub(crate) fn stop_channel() -> (Sender<()>, Receiver<()>) {
+			bounded(1)
+		}
 
-        pub(crate) fn unbounded<T>() -> (UnboundedSender<T>, UnboundedReceiver<T>) {
-            unbounded_channel::<T>()
-        }
-    }
+		pub(crate) fn unbounded<T>(
+		) -> (UnboundedSender<T>, UnboundedReceiver<T>) {
+			unbounded_channel::<T>()
+		}
+	}
 
-    pub use cache::{AsyncCache, AsyncCacheBuilder};
+	pub use cache::{AsyncCache, AsyncCacheBuilder};
 );
 
 cfg_sync!(
-    pub(crate) mod sync {
-        pub(crate) use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
-        pub(crate) use std::thread::{spawn, JoinHandle};
-        pub(crate) use std::time::Instant;
+	pub(crate) mod sync {
+		pub(crate) use crossbeam_channel::{
+			bounded, select, unbounded, Receiver, Sender,
+		};
+		pub(crate) use std::thread::{spawn, JoinHandle};
+		pub(crate) use std::time::Instant;
 
-        pub(crate) type UnboundedSender<T> = Sender<T>;
-        pub(crate) type UnboundedReceiver<T> = Receiver<T>;
-        pub(crate) type WaitGroup = wg::WaitGroup;
+		pub(crate) type UnboundedSender<T> = Sender<T>;
+		pub(crate) type UnboundedReceiver<T> = Receiver<T>;
+		pub(crate) type WaitGroup = wg::WaitGroup;
 
-        pub(crate) fn stop_channel() -> (Sender<()>, Receiver<()>) {
-            bounded(0)
-        }
-    }
+		pub(crate) fn stop_channel() -> (Sender<()>, Receiver<()>) {
+			bounded(0)
+		}
+	}
 
-    pub use cache::{Cache, CacheBuilder};
+	pub use cache::{Cache, CacheBuilder};
 );
 
 pub use error::CacheError;
@@ -259,126 +263,124 @@ use twox_hash::XxHash64;
 
 /// Item is the parameter when Cache reject, evict value,
 pub struct Item<V> {
-    /// the value of the entry
-    pub val: Option<V>,
+	/// the value of the entry
+	pub val: Option<V>,
 
-    /// the index of the entry(created by [`KeyBuilder`])
-    ///
-    /// [`KeyBuilder`]: struct.KeyBuilder.html
-    pub index: u64,
+	/// the index of the entry(created by [`KeyBuilder`])
+	///
+	/// [`KeyBuilder`]: struct.KeyBuilder.html
+	pub index: u64,
 
-    /// the conflict of the entry(created by [`KeyBuilder`])
-    ///
-    /// [`KeyBuilder`]: struct.KeyBuilder.html
-    pub conflict: u64,
+	/// the conflict of the entry(created by [`KeyBuilder`])
+	///
+	/// [`KeyBuilder`]: struct.KeyBuilder.html
+	pub conflict: u64,
 
-    /// the cost when store the entry in Cache.
-    pub cost: i64,
+	/// the cost when store the entry in Cache.
+	pub cost: i64,
 
-    /// exp contains the ttl information.
-    pub exp: Time,
+	/// exp contains the ttl information.
+	pub exp: Time,
 }
 
 impl<V> Item<V> {
-    pub(crate) fn new(index: u64, conflict: u64, cost: i64, val: Option<V>, ttl: Time) -> Self {
-        Self {
-            val,
-            index,
-            conflict,
-            cost,
-            exp: ttl,
-        }
-    }
+	pub(crate) fn new(
+		index: u64,
+		conflict: u64,
+		cost: i64,
+		val: Option<V>,
+		ttl: Time,
+	) -> Self {
+		Self { val, index, conflict, cost, exp: ttl }
+	}
 }
 
 impl<V: Clone> Clone for Item<V> {
-    fn clone(&self) -> Self {
-        Self {
-            val: self.val.clone(),
-            index: self.index,
-            conflict: self.conflict,
-            cost: self.cost,
-            exp: self.exp,
-        }
-    }
+	fn clone(&self) -> Self {
+		Self {
+			val: self.val.clone(),
+			index: self.index,
+			conflict: self.conflict,
+			cost: self.cost,
+			exp: self.exp,
+		}
+	}
 }
 
 impl<V: Copy> Copy for Item<V> {}
 
 impl<V: Debug> Debug for Item<V> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Item")
-            .field("value", &self.val)
-            .field("cost", &self.cost)
-            .field("ttl", &self.exp)
-            .finish()
-    }
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Item")
+			.field("value", &self.val)
+			.field("cost", &self.cost)
+			.field("ttl", &self.exp)
+			.finish()
+	}
 }
 
 /// By default, the Cache will always update the value if the value already exists in the cache,
 /// this trait is for you to check if the value should be updated.
 pub trait UpdateValidator<V>: Send + Sync + 'static {
-    /// should_update is called when a value already exists in cache and is being updated.
-    fn should_update(&self, prev: &V, curr: &V) -> bool;
+	/// should_update is called when a value already exists in cache and is being updated.
+	fn should_update(&self, prev: &V, curr: &V) -> bool;
 }
 
 /// DefaultUpdateValidator is a noop update validator.
 #[doc(hidden)]
 pub struct DefaultUpdateValidator<V: Send + Sync> {
-    _marker: PhantomData<fn(V)>,
+	_marker: PhantomData<fn(V)>,
 }
 
 impl<V: Send + Sync> Default for DefaultUpdateValidator<V> {
-    fn default() -> Self {
-        Self {
-            _marker: PhantomData::<fn(V)>,
-        }
-    }
+	fn default() -> Self {
+		Self { _marker: PhantomData::<fn(V)> }
+	}
 }
 
-impl<V: Send + Sync + 'static> UpdateValidator<V> for DefaultUpdateValidator<V> {
-    #[inline]
-    fn should_update(&self, _prev: &V, _curr: &V) -> bool {
-        true
-    }
+impl<V: Send + Sync + 'static> UpdateValidator<V>
+	for DefaultUpdateValidator<V>
+{
+	#[inline]
+	fn should_update(&self, _prev: &V, _curr: &V) -> bool {
+		true
+	}
 }
 
 /// CacheCallback is for customize some extra operations on values when related event happens.
 pub trait CacheCallback<V: Send + Sync>: Send + Sync + 'static {
-    /// on_exit is called whenever a value is removed from cache. This can be
-    /// used to do manual memory deallocation. Would also be called on eviction
-    /// and rejection of the value.
-    fn on_exit(&self, val: Option<V>);
+	/// on_exit is called whenever a value is removed from cache. This can be
+	/// used to do manual memory deallocation. Would also be called on eviction
+	/// and rejection of the value.
+	fn on_exit(&self, val: Option<V>);
 
-    /// on_evict is called for every eviction and passes the hashed key, value,
-    /// and cost to the function.
-    fn on_evict(&self, item: Item<V>) {
-        self.on_exit(item.val)
-    }
+	/// on_evict is called for every eviction and passes the hashed key, value,
+	/// and cost to the function.
+	fn on_evict(&self, item: Item<V>) {
+		self.on_exit(item.val)
+	}
 
-    /// on_reject is called for every rejection done via the policy.
-    fn on_reject(&self, item: Item<V>) {
-        self.on_exit(item.val)
-    }
+	/// on_reject is called for every rejection done via the policy.
+	fn on_reject(&self, item: Item<V>) {
+		self.on_exit(item.val)
+	}
 }
 
 /// DefaultCacheCallback is a noop CacheCallback implementation.
 #[derive(Clone, Debug)]
 #[doc(hidden)]
 pub struct DefaultCacheCallback<V> {
-    _marker: PhantomData<V>,
+	_marker: PhantomData<V>,
 }
 
 impl<V> Default for DefaultCacheCallback<V> {
-    fn default() -> Self {
-        Self {
-            _marker: Default::default(),
-        }
-    }
+	fn default() -> Self {
+		Self { _marker: Default::default() }
+	}
 }
 
 impl<V: Send + Sync + 'static> CacheCallback<V> for DefaultCacheCallback<V> {
-    fn on_exit(&self, _val: Option<V>) {}
+	fn on_exit(&self, _val: Option<V>) {}
 }
 
 /// Cost is a trait you can pass to the CacheBuilder in order to evaluate
@@ -391,31 +393,29 @@ impl<V: Send + Sync + 'static> CacheCallback<V> for DefaultCacheCallback<V> {
 /// 1. Set the Coster field to your own Coster implementation.
 /// 2. When calling `insert` for new items or item updates, use a `cost` of 0.
 pub trait Coster<V>: Send + Sync + 'static {
-    /// cost evaluates a value and outputs a corresponding cost. This function
-    /// is ran after insert is called for a new item or an item update with a cost
-    /// param of 0.
-    fn cost(&self, val: &V) -> i64;
+	/// cost evaluates a value and outputs a corresponding cost. This function
+	/// is ran after insert is called for a new item or an item update with a cost
+	/// param of 0.
+	fn cost(&self, val: &V) -> i64;
 }
 
 /// DefaultCoster is a noop Coster implementation.
 #[doc(hidden)]
 pub struct DefaultCoster<V> {
-    _marker: PhantomData<fn(V)>,
+	_marker: PhantomData<fn(V)>,
 }
 
 impl<V> Default for DefaultCoster<V> {
-    fn default() -> Self {
-        Self {
-            _marker: Default::default(),
-        }
-    }
+	fn default() -> Self {
+		Self { _marker: Default::default() }
+	}
 }
 
 impl<V: 'static> Coster<V> for DefaultCoster<V> {
-    #[inline]
-    fn cost(&self, _val: &V) -> i64 {
-        0
-    }
+	#[inline]
+	fn cost(&self, _val: &V) -> i64 {
+		0
+	}
 }
 
 /// [`KeyBuilder`] is the hashing algorithm used for every key. In Stretto, the Cache will never store the real key.
@@ -433,20 +433,20 @@ impl<V: 'static> Coster<V> for DefaultCoster<V> {
 /// [`TransparentKeyBuilder`]: struct.TransparentKeyBuilder.html
 /// [`DefaultKeyBuilder`]: struct.DefaultKeyBuilder.html
 pub trait KeyBuilder<K: Hash + Eq + ?Sized> {
-    /// `hash_index` is used to hash the key to u64
-    fn hash_index(&self, key: &K) -> u64;
+	/// `hash_index` is used to hash the key to u64
+	fn hash_index(&self, key: &K) -> u64;
 
-    /// if you want a 128bit hashes, you should implement this method,
-    /// or leave this method return 0
-    fn hash_conflict(&self, key: &K) -> u64 {
-        let _ = key;
-        0
-    }
+	/// if you want a 128bit hashes, you should implement this method,
+	/// or leave this method return 0
+	fn hash_conflict(&self, key: &K) -> u64 {
+		let _ = key;
+		0
+	}
 
-    /// build the key to 128bit hashes.
-    fn build_key(&self, k: &K) -> (u64, u64) {
-        (self.hash_index(k), self.hash_conflict(k))
-    }
+	/// build the key to 128bit hashes.
+	fn build_key(&self, k: &K) -> (u64, u64) {
+		(self.hash_index(k), self.hash_conflict(k))
+	}
 }
 
 /// DefaultKeyBuilder is a built-in `KeyBuilder` for the Cache.
@@ -461,24 +461,24 @@ pub trait KeyBuilder<K: Hash + Eq + ?Sized> {
 /// [`TransparentKeyBuilder`]: struct.TransparentKeyBuilder.html
 #[derive(Debug, Default)]
 pub struct DefaultKeyBuilder {
-    s: RandomState,
-    xx: BuildHasherDefault<XxHash64>,
+	s: RandomState,
+	xx: BuildHasherDefault<XxHash64>,
 }
 
 impl<K: Hash + Eq + ?Sized> KeyBuilder<K> for DefaultKeyBuilder {
-    #[inline]
-    fn hash_index(&self, key: &K) -> u64 {
-        let mut s = self.s.build_hasher();
-        key.hash(&mut s);
-        s.finish()
-    }
+	#[inline]
+	fn hash_index(&self, key: &K) -> u64 {
+		let mut s = self.s.build_hasher();
+		key.hash(&mut s);
+		s.finish()
+	}
 
-    #[inline]
-    fn hash_conflict(&self, key: &K) -> u64 {
-        let mut x = self.xx.build_hasher();
-        key.hash(&mut x);
-        x.finish()
-    }
+	#[inline]
+	fn hash_conflict(&self, key: &K) -> u64 {
+		let mut x = self.xx.build_hasher();
+		key.hash(&mut x);
+		x.finish()
+	}
 }
 
 /// Implement this trait for the key, if you want to use [`TransparentKeyBuilder`] as the [`KeyBuilder`]
@@ -490,8 +490,8 @@ impl<K: Hash + Eq + ?Sized> KeyBuilder<K> for DefaultKeyBuilder {
 /// [`KeyBuilder`]: trait.KeyBuilder.html
 /// [`Cache`]: struct.Cache.html
 pub trait TransparentKey: Hash + Eq {
-    /// convert self to `u64`
-    fn to_u64(&self) -> u64;
+	/// convert self to `u64`
+	fn to_u64(&self) -> u64;
 }
 
 /// TransparentKeyBuilder converts key to `u64`.
@@ -502,19 +502,19 @@ pub trait TransparentKey: Hash + Eq {
 /// [`TransparentKey`]: trait.TransparentKey.html
 #[derive(Default, Copy, Clone, Eq, PartialEq, Debug)]
 pub struct TransparentKeyBuilder<K: TransparentKey> {
-    _marker: PhantomData<K>,
+	_marker: PhantomData<K>,
 }
 
 impl<K: TransparentKey> KeyBuilder<K> for TransparentKeyBuilder<K> {
-    #[inline]
-    fn hash_index(&self, key: &K) -> u64 {
-        key.to_u64()
-    }
+	#[inline]
+	fn hash_index(&self, key: &K) -> u64 {
+		key.to_u64()
+	}
 
-    #[inline]
-    fn hash_conflict(&self, _key: &K) -> u64 {
-        0
-    }
+	#[inline]
+	fn hash_conflict(&self, _key: &K) -> u64 {
+		0
+	}
 }
 
 macro_rules! impl_transparent_key {
@@ -530,15 +530,15 @@ macro_rules! impl_transparent_key {
 }
 
 impl_transparent_key! {
-    bool,
-    u8,
-    u16,
-    u32,
-    u64,
-    usize,
-    i8,
-    i16,
-    i32,
-    i64,
-    isize
+	bool,
+	u8,
+	u16,
+	u32,
+	u64,
+	usize,
+	i8,
+	i16,
+	i32,
+	i64,
+	isize
 }
