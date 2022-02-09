@@ -442,9 +442,7 @@ impl<K, V, KH, C, U, CB, S> AsyncCache<K, V, KH, C, U, CB, S>
 
 		let (index, conflict) = self.key_to_hash.build_key(&k);
 		// delete immediately
-		let prev = self.store.remove(&index, conflict);
-
-		if let Some(prev) = prev {
+		if let Some(prev) = self.store.remove(&index, conflict) {
 			self.callback.on_exit(Some(prev.value.into_inner()));
 		}
 		// If we've set an item, it would be applied slightly later.
@@ -478,30 +476,13 @@ impl<K, V, KH, C, U, CB, S> AsyncCache<K, V, KH, C, U, CB, S>
 		if let Some((index, item)) = self.update(key, val, cost, ttl, only_update) {
 			let is_update = item.is_update();
 			// Attempt to send item to policy.
-			select! {
-					res = self.insert_buf_tx.send(item) => res.map_or_else(|_| {
-					   if is_update {
-							// Return true if this was an update operation since we've already
-							// updated the store. For all the other operations (set/delete), we
-							// return false which means the item was not inserted.
-							true
-						} else {
-							self.metrics.add(MetricType::DropSets, index, 1);
-							false
-						}
-					}, |_| true),
-					else => {
-						if is_update {
-							// Return true if this was an update operation since we've already
-							// updated the store. For all the other operations (set/delete), we
-							// return false which means the item was not inserted.
-							true
-						} else {
-							self.metrics.add(MetricType::DropSets, index, 1);
-							false
-						}
-					}
-				}
+			self.insert_buf_tx.send(item).await.map_or_else(|_| {
+				// Updates return true since they've already been inserted.
+				// All other ops (set/delete) return false, i.e. they haven't
+				// been inserted.
+				if !is_update { self.metrics.add(MetricType::DropSets, index, 1); }
+				is_update
+			}, |_| true)
 		} else {
 			false
 		}
@@ -509,11 +490,11 @@ impl<K, V, KH, C, U, CB, S> AsyncCache<K, V, KH, C, U, CB, S>
 }
 
 impl<V, U, CB, S> CacheProcessor<V, U, CB, S>
-	where
-		V: Send + Sync + 'static,
-		U: UpdateValidator<V>,
-		CB: CacheCallback<V>,
-		S: BuildHasher + Clone + 'static + Send,
+where
+	V: Send + Sync + 'static,
+	U: UpdateValidator<V>,
+	CB: CacheCallback<V>,
+	S: BuildHasher + Clone + 'static + Send,
 {
 	pub(crate) fn new(
 		num_to_keep: usize,
